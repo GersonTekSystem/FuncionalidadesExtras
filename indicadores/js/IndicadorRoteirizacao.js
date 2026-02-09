@@ -122,7 +122,8 @@ const app = createApp({
             map.value = new google.maps.Map(mapDiv.value, {
                 zoom: 5,
                 center: localizacao,
-                mapTypeId: "roadmap"
+                mapTypeId: "roadmap",
+                fullscreenControl: false,
             });
 
             await nextTick();
