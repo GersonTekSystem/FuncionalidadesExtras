@@ -122,7 +122,8 @@ const app = createApp({
             map.value = new google.maps.Map(mapDiv.value, {
                 zoom: 5,
                 center: localizacao,
-                mapTypeId: "roadmap"
+                mapTypeId: "roadmap",
+                fullscreenControl: false,
             });
 
             await nextTick();
@@ -142,10 +143,15 @@ const app = createApp({
                     throw new Error("Nenhum ponto de entrega identificado!");
 
                 const result = await desenharRota();
-                const novaSequencia = result.routes[0].waypoint_order;
+                
+                if (result && result.routes && result.routes.length > 0) {
+                    const novaSequencia = result.routes[0].waypoint_order;
+                    limparMarkers();
+                    adicionarMarkers(map.value, novaSequencia);
+                } else {
+                    throw new Error("Não foi possível calcular a rota: nenhum resultado válido retornado.");
+                }
 
-                limparMarkers();
-                adicionarMarkers(map.value, novaSequencia);
             } catch (error) {
                 console.error("Ocorreu um erro:", error);
                 abrirDialog(
@@ -481,7 +487,14 @@ const app = createApp({
         const enderecosDistintos = computed(() => {
             const todosEnderecos = enderecosDestinos.value.concat(enderecosEmpresaRef.value);
             return [...new Set(todosEnderecos.map(item => item.endereco))];
-        })
+        });
+
+        const pedidosInvalidos = pedidosRef.value.filter(p => p.pedido.lat == "0" || p.pedido.lng == "0");
+
+        if (pedidosInvalidos.length > 0) {
+            const lista = pedidosInvalidos.map(p => `Pedido #${p.pedido.numeroPedido} - ${p.pedido.endereco}`).join("\n");
+            throw new Error("Existem pedidos sem coordenadas válidas:\n" + lista + "\n\nOs mesmos vão ser desconsiderados na rota. Corrija os endereços no sistema para ter a rota completa.");
+        }
 
         function setParametrosStorage(chave, dataObject) {
             try {
